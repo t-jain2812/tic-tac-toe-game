@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tic Tac Toe</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: black;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        #status {
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: red;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cell:hover {
+            background-color: #f0f0f0;
+        }
+
+        .winning-cell {
+            background-color: grey;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #reset-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.1em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        #reset-btn.active {
+            opacity: 1;
+            transform: scale(1.1);
+            animation: bounce 1s infinite;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1.1); }
+            50% { transform: scale(1.15); }
+        }
+
+        #reset-btn:hover {
+            background-color: #45a049;
+        }
+
+        .x {
+            color: #e74c3c;
+        }
+
+        .o {
+            color: darkblue;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tic Tac Toe</h1>
+    <div id="status">Player X's turn</div>
+    <div id="board"></div>
+    <button id="reset-btn">Reset Game</button>
+
+    <script>
+        let currentPlayer = 'X';
+        let gameBoard = Array(9).fill('');
+        let gameActive = true;
+
+        const winningCombinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6] // Diagonals
+        ];
+
+        function createBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            gameBoard.forEach((_, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.setAttribute('data-index', index);
+                cell.addEventListener('click', handleCellClick);
+                board.appendChild(cell);
+            });
+        }
+
+        function celebrate() {
+            // Multiple confetti bursts
+            const duration = 3000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    origin: { x: randomInRange(0.1, 0.9), y: Math.random() - 0.2 }
+                });
+            }, 250);
+
+            // Activate reset button
+            const resetBtn = document.getElementById('reset-btn');
+            resetBtn.classList.add('active');
+        }
+
+        function highlightWinningCells(combination) {
+            combination.forEach(index => {
+                document.querySelector(`[data-index="${index}"]`).classList.add('winning-cell');
+            });
+        }
+
+        function handleCellClick(e) {
+            const index = e.target.getAttribute('data-index');
+            if (gameBoard[index] === '' && gameActive) {
+                gameBoard[index] = currentPlayer;
+                e.target.textContent = currentPlayer;
+                e.target.classList.add(currentPlayer.toLowerCase());
+
+                const winningCombo = checkWinner();
+                if (winningCombo) {
+                    document.getElementById('status').textContent = `Player ${currentPlayer} wins!`;
+                    gameActive = false;
+                    highlightWinningCells(winningCombo);
+                    celebrate();
+                } else if (gameBoard.every(cell => cell !== '')) {
+                    document.getElementById('status').textContent = "It's a tie!";
+                    gameActive = false;
+                    document.getElementById('reset-btn').classList.add('active');
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    document.getElementById('status').textContent = `Player ${currentPlayer}'s turn`;
+                }
+            }
+        }
+
+        function checkWinner() {
+            for (let combination of winningCombinations) {
+                if (combination.every(index => gameBoard[index] === currentPlayer)) {
+                    return combination;
+                }
+            }
+            return null;
+        }
+
+        function resetGame() {
+            gameBoard = Array(9).fill('');
+            gameActive = true;
+            currentPlayer = 'X';
+            document.getElementById('status').textContent = "Player X's turn";
+            document.getElementById('reset-btn').classList.remove('active');
+            createBoard();
+        }
+
+        document.getElementById('reset-btn').addEventListener('click', resetGame);
+
+        // Initialize the game
+        createBoard();
+    </script>
+</body>
+</html>
